@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heartverse</title>
+  <style>
+    /* Add your CSS styles here */
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Heartverse</h1>
+    <nav>
+      <ul>
+        <li><a href="#" onclick="displayStory(0)">Story 1</a></li>
+        <!-- Add other stories similarly -->
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section id="story">
+      <h2 id="storyTitle">Select a story</h2>
+      <img id="storyImage" src="" alt="Story Image">
+      <p id="storyContent">Please select a story to read.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Heartverse</p>
+  </footer>
+
+  <script>
+    const stories = [
+      {
+        title: "Story 1",
+        content: "Once upon a time...",
+        image: "data:image/jpeg;base64,[Base64StringHere]"
+      },
+      // Add other stories similarly
+    ];
+
+    function displayStory(index) {
+      const story = stories[index];
+      document.getElementById("storyTitle").innerText = story.title;
+      document.getElementById("storyContent").innerText = story.content;
+      document.getElementById("storyImage").src = story.image;
+    }
+  </script>
+</body>
+</html>
