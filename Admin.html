@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Side Talk Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Poppins',sans-serif;display:flex;background:#F3F4F6;}
+.sidebar{width:220px;background:#1E3A8A;color:white;height:100vh;display:flex;flex-direction:column;}
+.sidebar h2{text-align:center;padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.2);}
+.sidebar button{background:none;border:none;color:white;padding:15px 20px;text-align:left;cursor:pointer;font-weight:600;transition:0.2s;}
+.sidebar button:hover{background:rgba(255,255,255,0.1);}
+.main-content{flex:1;padding:25px;overflow-y:auto;}
+.admin-section{display:none;}
+.admin-section.active{display:block;}
+.card{background:white;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+.report-card{background:#FFF3F3;border-radius:12px;padding:15px;margin-bottom:10px;}
+.ad-card{background:#E3F2FD;border-radius:12px;padding:15px;margin-bottom:10px;}
+#analytics div{display:flex;justify-content:space-between;padding:10px 0;}
+button.action-btn{background:#1E3A8A;color:white;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;}
+button.action-btn:hover{background:#4F46E5;}
+</style>
+<script type="module">
+// ---------------- Firebase Setup ----------------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, onSnapshot, doc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBbg9cxg6qGNYWyXxUKiJmBLojdXvZu6sU",
+  authDomain: "side-chat-b2553.firebaseapp.com",
+  projectId: "side-chat-b2553",
+  storageBucket: "side-chat-b2553.firebasestorage.app",
+  messagingSenderId: "1019895961728",
+  appId: "1:1019895961728:web:4e229932ff0bd9b15b2e65"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ---------------- Sidebar Navigation ----------------
+function showAdminSection(sectionId){
+  document.querySelectorAll(".admin-section").forEach(sec=> sec.style.display="none");
+  document.getElementById(sectionId).style.display="block";
+}
+
+// ---------------- Analytics ----------------
+async function loadAnalytics(){
+  const analyticsDiv = document.getElementById("analytics-list");
+  analyticsDiv.innerHTML="";
+
+  const usersSnap = await getDocs(collection(db,"users"));
+  const totalUsers = usersSnap.size;
+  document.getElementById("total-users").textContent = totalUsers;
+
+  const activeUsers = Array.from(usersSnap.docs).filter(docSnap=>{
+    const data = docSnap.data();
+    if(!data.lastActive) return false;
+    const lastActiveTime = data.lastActive.toDate().getTime();
+    const now = new Date().getTime();
+    return now - lastActiveTime <= 24*60*60*1000;
+  }).length;
+  document.getElementById("active-users").textContent = activeUsers;
+
+  let totalTime=0;
+  usersSnap.forEach(docSnap=>{
+    const data = docSnap.data();
+    if(data.totalTime) totalTime+=data.totalTime;
+  });
+  document.getElementById("total-time").textContent = formatTime(totalTime);
+
+  const avgTime = totalUsers>0 ? Math.floor(totalTime / totalUsers) : 0;
+  document.getElementById("avg-time").textContent = formatTime(avgTime);
+
+  const today = new Date().toISOString().split("T")[0];
+  await addDoc(collection(db,"analytics"),{
+    date:today,
+    totalUsers,
+    activeUsers,
+    totalTime,
+    avgTime,
+    createdAt: serverTimestamp()
+  });
+
+  const analyticsSnap = await getDocs(collection(db,"analytics"));
+  analyticsSnap.forEach(docSnap=>{
+    const data = docSnap.data();
+    const div = document.createElement("div");
+    div.className="card";
+    div.innerHTML=`<strong>Date:</strong> ${data.date} | <strong>Total:</strong> ${data.totalUsers} | <strong>Active:</strong> ${data.activeUsers} | <strong>Total Time:</strong> ${formatTime(data.totalTime)} | <strong>Avg Time:</strong> ${formatTime(data.avgTime)}
+    <button class="action-btn" onclick="deleteAnalytics('${docSnap.id}')">Delete</button>`;
+    analyticsDiv.appendChild(div);
+  });
+}
+
+function formatTime(seconds){
+  const h = Math.floor(seconds/3600);
+  const m = Math.floor((seconds%3600)/60);
+  const s = seconds%60;
+  return `${h}h ${m}m ${s}s`;
+}
+
+async function deleteAnalytics(id){
+  await deleteDoc(doc(db,"analytics",id));
+  loadAnalytics();
+}
+
+// ---------------- Reports ----------------
+async function loadReports(){
+  const reportsDiv = document.getElementById("reports-list");
+  reportsDiv.innerHTML="";
+  const snapshot = await getDocs(collection(db,"reports"));
+  snapshot.forEach(docSnap=>{
+    const data = docSnap.data();
+    const div = document.createElement("div");
+    div.className="report-card";
+    div.innerHTML=`<strong>${data.category}</strong><br>${data.description}`;
+    reportsDiv.appendChild(div);
+  });
+}
+
+// ---------------- Ads ----------------
+async function loadAds(){
+  const adsDiv = document.getElementById("ads-list");
+  adsDiv.innerHTML="";
+  const snapshot = await getDocs(collection(db,"ads"));
+  snapshot.forEach(docSnap=>{
+    const data = docSnap.data();
+    const div = document.createElement("div");
+    div.className="ad-card";
+    div.innerHTML=`<strong>${data.title}</strong><br>${data.link}`;
+    adsDiv.appendChild(div);
+  });
+}
+
+async function addAd(){
+  const title = prompt("Enter Ad Title:");
+  const link = prompt("Enter Ad Link:");
+  if(!title || !link) return;
+  await addDoc(collection(db,"ads"),{
+    title:title,
+    link:link,
+    createdAt:serverTimestamp()
+  });
+  loadAds();
+}
+
+// ---------------- Clan Manager ----------------
+async function loadClans(){
+  const clansDiv = document.getElementById("clans-list");
+  clansDiv.innerHTML="";
+  const snapshot = await getDocs(collection(db,"clans"));
+  snapshot.forEach(docSnap=>{
+    const data = docSnap.data();
+    const div = document.createElement("div");
+    div.className="card";
+    div.innerHTML=`${data.name} <button class="action-btn" onclick="deleteClan('${docSnap.id}')">Delete</button>`;
+    clansDiv.appendChild(div);
+  });
+}
+
+async function addClan(){
+  const name = prompt("Enter Clan Name:");
+  if(!name) return;
+  await addDoc(collection(db,"clans"),{name:name,createdAt:serverTimestamp()});
+  loadClans();
+}
+
+async function deleteClan(id){
+  await deleteDoc(doc(db,"clans",id));
+  loadClans();
+}
+
+// ---------------- Voice Notes Management ----------------
+async function loadVoiceNotes(){
+  const voiceDiv = document.getElementById("voice-list");
+  voiceDiv.innerHTML="";
+  const snapshot = await getDocs(collection(db,"voiceMessages"));
+  snapshot.forEach(docSnap=>{
+    const data = docSnap.data();
+    const div = document.createElement("div");
+    div.className="card";
+    div.innerHTML=`${data.username}: <button class="action-btn" onclick="deleteVoice('${docSnap.id}','${data.path}')">Delete</button>`;
+    voiceDiv.appendChild(div);
+  });
+}
+
+async function deleteVoice(id,path){
+  await deleteDoc(doc(db,"voiceMessages",id));
+  const voiceRef = ref(storage,path);
+  await deleteObject(voiceRef);
+  loadVoiceNotes();
+}
+</script>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>Side Talk Admin</h2>
+  <button onclick="showAdminSection('dashboard-section'); loadAnalytics()">Dashboard</button>
+  <button onclick="showAdminSection('chat-access-section')">Chat Access</button>
+  <button onclick="showAdminSection('ads-section'); loadAds()">Ads Manager</button>
+  <button onclick="showAdminSection('analytics-section'); loadAnalytics()">Analytics</button>
+  <button onclick="showAdminSection('reports-section'); loadReports()">Reports / Complaints</button>
+  <button onclick="showAdminSection('clan-section'); loadClans()">Clan Manager</button>
+  <button onclick="showAdminSection('moderators-section')">Partners / Moderators</button>
+  <button onclick="showAdminSection('system-section')">System Logs</button>
+  <button onclick="showAdminSection('voice-section'); loadVoiceNotes()">Voice Notes</button>
+</div>
+
+<div class="main-content">
+  <div id="dashboard-section" class="admin-section active"><h2>Dashboard</h2><div class="card">Welcome, Admin!</div></div>
+  <div id="chat-access-section" class="admin-section"><h2>Chat Access</h2><div class="card">Manage user chats</div></div>
+  <div id="ads-section" class="admin-section"><h2>Ads Manager</h2><button class="action-btn" onclick="addAd()">Add New Ad</button><div id="ads-list"></div></div>
+  <div id="analytics-section" class="admin-section"><h2>Analytics</h2><div id="analytics-overview" class="card">
+    <div><strong>Total Users:</strong> <span id="total-users">0</span></div>
+    <div><strong>Active Users (24h):</strong> <span id="active-users">0</span></div>
+    <div><strong>Total Time:</strong> <span id="total-time">0h 0m 0s</span></div>
+    <div><strong>Average User Time:</strong> <span id="avg-time">0h 0m 0s</span></div>
+  </div><h3>Saved Analytics Snapshots</h3><div id="analytics-list"></div></div>
+  <div id="reports-section" class="admin-section"><h2>Reports / Complaints</h2><div id="reports-list"></div></div>
+  <div id="clan-section" class="admin-section"><h2>Clan Manager</h2><button class="action-btn" onclick="addClan()">Add Clan</button><div id="clans-list"></div></div>
+  <div id="moderators-section" class="admin-section"><h2>Partners / Moderators</h2><div class="card">Manage moderators and partners</div></div>
+  <div id="system-section" class="admin-section"><h2>System Logs</h2><div class="card">View logs</div></div>
+  <div id="voice-section" class="admin-section"><h2>Voice Notes Management</h2><div id="voice-list"></div></div>
+</div>
+</body>
+</html>
