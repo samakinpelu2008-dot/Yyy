@@ -1,52 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heartverse</title>
-  <style>
-    /* Add your CSS styles here */
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Side Talk</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Poppins',sans-serif;margin:0;background:#F3F4F6;}
+header{display:flex;align-items:center;padding:15px 30px;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+header img.zoom-logo{width:50px;height:50px;margin-right:15px;cursor:pointer;animation: zoom 3s infinite alternate;}
+@keyframes zoom{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
+header span{font-weight:600;font-size:1.4rem;color:#1E3A8A;}
+.home-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:25px;padding:40px;}
+.home-card{background:white;padding:40px 20px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:600;font-size:1.2rem;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.1);transition: transform 0.3s, box-shadow 0.3s;text-align:center;}
+.home-card:hover{transform:translateY(-7px);box-shadow:0 10px 25px rgba(0,0,0,0.15);background:linear-gradient(135deg,#6366F1,#4F46E5);color:white;}
+.chat-section{display:none;padding:20px;}
+.chat-messages{border:1px solid #D1D5DB;height:400px;overflow-y:auto;padding:10px;border-radius:12px;background:#F3F4F6;margin-bottom:10px;}
+.message{margin-bottom:10px;padding:8px 12px;border-radius:10px;background:#E5E7EB;}
+.username{font-weight:600;color:#1E3A8A;cursor:pointer;}
+.banner-ad{background:#FFD700;text-align:center;padding:8px;margin:10px 0;border-radius:8px;font-weight:600;color:#000;}
+input,textarea,select,button{font-family:'Poppins',sans-serif;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #D1D5DB;}
+button{background:#1E3A8A;color:white;cursor:pointer;font-weight:600;border:none;}
+button:hover{background:#4F46E5;}
+#report-section textarea{width:100%;min-height:100px;resize:none;}
+#report-section select,input,button{width:100%;}
+</style>
+<script type="module">
+// ---------------- Firebase Setup ----------------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, doc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBbg9cxg6qGNYWyXxUKiJmBLojdXvZu6sU",
+  authDomain: "side-chat-b2553.firebaseapp.com",
+  projectId: "side-chat-b2553",
+  storageBucket: "side-chat-b2553.firebasestorage.app",
+  messagingSenderId: "1019895961728",
+  appId: "1:1019895961728:web:4e229932ff0bd9b15b2e65"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ---------------- Section Navigation ----------------
+function showSection(sectionId){document.querySelectorAll("section").forEach(sec=> sec.style.display="none");document.getElementById(sectionId).style.display="block";}
+
+// ---------------- Logo Admin Click ----------------
+document.addEventListener("DOMContentLoaded", ()=>{
+  const logo = document.querySelector(".zoom-logo");
+  let clickCount = 0;
+  logo.addEventListener("click", ()=>{
+    clickCount++;
+    if(clickCount >= 20){
+      const pw = prompt("Enter Admin Password:");
+      if(pw==="Akinpepe100") window.location.href="admin.html";
+      else alert("Wrong password");
+      clickCount=0;
+    }
+  });
+});
+
+// ---------------- Clan & Username ----------------
+let currentUsername="";
+let currentClan="";
+async function selectClan(){
+  const clans=["shadow","ghost","phantom","viper"];
+  currentClan = prompt("Choose a clan: shadow, ghost, phantom, viper");
+  if(!clans.includes(currentClan)) currentClan="shadow";
+  const snap = await getDocs(collection(db,"users"));
+  const id = snap.size + 1;
+  currentUsername = `${currentClan}${id.toString().padStart(4,"0")}`;
+  document.getElementById("username-display").textContent = `You: ${currentUsername}`;
+  // Log user login
+  await addDoc(collection(db,"users"),{username:currentUsername,clan:currentClan,lastActive:serverTimestamp(),totalTime:0});
+}
+
+// ---------------- Send & Load Messages ----------------
+async function sendMessage(chatType){
+  const input = document.getElementById(`${chatType}-msg-input`);
+  const msg = input.value.trim();
+  if(!msg) return;
+  const roomId = sessionStorage.getItem("roomId") || chatType;
+  await addDoc(collection(db,`${chatType}Rooms/${roomId}/messages`),{
+    username: currentUsername, clan: currentClan, text: msg, timestamp: serverTimestamp(), type:"text"
+  });
+  input.value="";
+}
+function loadChat(chatType){
+  selectClan();
+  const msgsDiv = document.getElementById(`${chatType}-messages`);
+  const roomId = sessionStorage.getItem("roomId") || chatType;
+  const q = query(collection(db,`${chatType}Rooms/${roomId}/messages`), orderBy("timestamp"));
+  onSnapshot(q, snapshot=>{
+    msgsDiv.innerHTML="";
+    snapshot.forEach((docSnap,index)=>{
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.className="message";
+      if(data.type==="text"){
+        div.innerHTML=`<span class="username">${data.username}</span><br>${data.text}`;
+      } else if(data.type==="voice"){
+        div.innerHTML=`<span class="username">${data.username}</span><br><button onclick="playVoice('${data.voiceURL}','${docSnap.id}','${chatType}')">Play Voice Note (Once)</button>`;
+      }
+      msgsDiv.appendChild(div);
+      // Banner ad every 50 messages
+      if((index+1) % 50 === 0){const ad = document.createElement("div");ad.className="banner-ad";ad.textContent="Banner Ad Here";msgsDiv.appendChild(ad);}
+      // Delete messages older than 24h
+      const now = new Date().getTime();
+      if(data.timestamp){const msgTime = data.timestamp.toDate().getTime();if(now - msgTime > 24*60*60*1000) deleteDoc(doc(db,`${chatType}Rooms/${roomId}/messages`,docSnap.id));}
+    });
+    msgsDiv.scrollTop = msgsDiv.scrollHeight;
+  });
+}
+
+// ---------------- Room Setup ----------------
+async function createRoom(){const name=prompt("Enter room name:");if(!name) return;const code=generateCode(6);await addDoc(collection(db,"rooms"),{name:name,code:code,members:0,createdAt:serverTimestamp()});alert(`Room created! Code: ${code}`);}
+async function joinRoom(){const code=document.getElementById("join-code").value.trim();if(!code) return alert("Enter Room Code!");const snapshot=await getDocs(collection(db,"rooms"));let found=false;snapshot.forEach(docSnap=>{const data=docSnap.data();if(data.code===code){found=true;sessionStorage.setItem("roomId",docSnap.id);sessionStorage.setItem("roomName",data.name);alert(`Joined Room: ${data.name}`);}});if(!found) alert("Room code not found!");}
+function generateCode(length){const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";let result="";for(let i=0;i<length;i++) result+=chars.charAt(Math.floor(Math.random()*chars.length));return result;}
+
+// ---------------- Report / Safety ----------------
+async function submitReport(){const category=document.getElementById("report-category").value.trim();const desc=document.getElementById("report-description").value.trim();if(!category||!desc) return alert("Fill all fields!");await addDoc(collection(db,"reports"),{category:category,description:desc,timestamp:serverTimestamp()});alert("Report submitted!");document.getElementById("report-form").reset();}
+
+// ---------------- Banner Ads ----------------
+let adsList=[];let currentAdIndex=0;
+async function loadUserAds(){
+  const adsSnap = await getDocs(collection(db,"ads"));
+  adsList = [];
+  adsSnap.forEach(docSnap=>{adsList.push({id:docSnap.id,...docSnap.data()});});
+  rotateBannerAd();
+}
+function rotateBannerAd(){if(adsList.length===0) return;const banner=document.getElementById("banner-ad");banner.textContent=adsList[currentAdIndex].title;addDoc(collection(db,"adImpressions"),{adId:adsList[currentAdIndex].id,user:currentUsername,timestamp:serverTimestamp()});currentAdIndex=(currentAdIndex+1)%adsList.length;setTimeout(rotateBannerAd,30000);}
+
+// ---------------- Voice Notes ----------------
+async function sendVoiceNote(chatType){
+  const fileInput=document.getElementById("voice-note-input");if(fileInput.files.length===0) return alert("Select a voice note!");const file=fileInput.files[0];if(file.size>3*1024*1024) return alert("Max 3 MB / ~3 min");const voiceRef=ref(storage,`${chatType}/voice_${Date.now()}_${currentUsername}`);await uploadBytes(voiceRef,file);const url=await getDownloadURL(voiceRef);await addDoc(collection(db,`${chatType}Rooms/${sessionStorage.getItem("roomId")}/messages`),{username:currentUsername,clan:currentClan,voiceURL:url,timestamp:serverTimestamp(),type:"voice"});fileInput.value="";}
+async function playVoice(url,msgId,chatType){const audio=new Audio(url);audio.play();audio.onended=async ()=>{const messagesRef=doc(db,`${chatType}Rooms/${sessionStorage.getItem("roomId")}/messages`,msgId);await deleteDoc(messagesRef);};}
+</script>
 </head>
 <body>
-  <header>
-    <h1>Heartverse</h1>
-    <nav>
-      <ul>
-        <li><a href="#" onclick="displayStory(0)">Story 1</a></li>
-        <!-- Add other stories similarly -->
-      </ul>
-    </nav>
-  </header>
 
-  <main>
-    <section id="story">
-      <h2 id="storyTitle">Select a story</h2>
-      <img id="storyImage" src="" alt="Story Image">
-      <p id="storyContent">Please select a story to read.</p>
-    </section>
-  </main>
+<header>
+  <img src="logo.png" class="zoom-logo" alt="Logo">
+  <span>Side Talk</span>
+</header>
 
-  <footer>
-    <p>&copy; 2025 Heartverse</p>
-  </footer>
+<!-- Home -->
+<section id="home-section">
+  <div class="home-container">
+    <div class="home-card" onclick="showSection('general-chat-section'); loadChat('general'); loadUserAds()">General Anonymous Chat</div>
+    <div class="home-card" onclick="showSection('free-chat-section'); loadChat('free'); loadUserAds()">Free Chat</div>
+    <div class="home-card" onclick="showSection('room-setup-section')">Create / Join Room</div>
+    <div class="home-card" onclick="showSection('report-section')">Report / Safety</div>
+  </div>
+</section>
 
-  <script>
-    const stories = [
-      {
-        title: "Story 1",
-        content: "Once upon a time...",
-        image: "data:image/jpeg;base64,[Base64StringHere]"
-      },
-      // Add other stories similarly
-    ];
+<!-- General Chat -->
+<section id="general-chat-section" class="chat-section">
+  <h2>General Chat</h2>
+  <div id="username-display"></div>
+  <div id="general-messages" class="chat-messages"></div>
+  <div id="banner-ad" class="banner-ad">Ad Here</div>
+  <input type="text" id="general-msg-input" placeholder="Type a message...">
+  <button onclick="sendMessage('general')">Send</button>
+  <input type="file" id="voice-note-input" accept="audio/*">
+  <button onclick="sendVoiceNote('general')">Send Voice Note (Max 3 min)</button>
+</section>
 
-    function displayStory(index) {
-      const story = stories[index];
-      document.getElementById("storyTitle").innerText = story.title;
-      document.getElementById("storyContent").innerText = story.content;
-      document.getElementById("storyImage").src = story.image;
-    }
-  </script>
+<!-- Free Chat -->
+<section id="free-chat-section" class="chat-section">
+  <h2>Free Chat</h2>
+  <div id="username-display"></div>
+  <div id="free-messages" class="chat-messages"></div>
+  <div id="banner-ad" class="banner-ad">Ad Here</div>
+  <input type="text" id="free-msg-input" placeholder="Type a message...">
+  <button onclick="sendMessage('free')">Send</button>
+  <input type="file" id="voice-note-input" accept="audio/*">
+  <button onclick="sendVoiceNote('free')">Send Voice Note (Max 3 min)</button>
+</section>
+
+<!-- Room Setup -->
+<section id="room-setup-section" class="chat-section">
+  <h2>Create / Join Room</h2>
+  <button onclick="createRoom()">Create New Room</button>
+  <div style="margin-top:15px;">
+    <input type="text" id="join-code" placeholder="Enter Room Code">
+    <button onclick="joinRoom()">Join Room</button>
+  </div>
+</section>
+
+<!-- Report / Safety -->
+<section id="report-section" class="chat-section">
+  <h2>Report / Safety</h2>
+  <form id="report-form" onsubmit="event.preventDefault(); submitReport();">
+    <label for="report-category">Category</label>
+    <select id="report-category">
+      <option value="">Select Category</option>
+      <option value="Abuse">Abuse</option>
+      <option value="Spam">Spam</option>
+      <option value="Harassment">Harassment</option>
+      <option value="Other">Other</option>
+    </select>
+    <label for="report-description">Description</label>
+    <textarea id="report-description" placeholder="Describe the issue..."></textarea>
+    <button type="submit">Submit Report</button>
+  </form>
+</section>
+
 </body>
 </html>
