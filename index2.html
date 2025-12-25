@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Side Talk - Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#0f172a;
+  color:#fff;
+}
+header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  background:#020617;
+}
+header img{
+  height:42px;
+  cursor:pointer;
+}
+header h1{
+  font-size:20px;
+  margin:0;
+}
+nav{
+  display:flex;
+  justify-content:space-around;
+  margin:10px 0;
+}
+nav button{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+}
+.hidden{display:none;}
+.container{
+  padding:15px;
+}
+.chatBox{
+  height:50vh;
+  overflow-y:auto;
+  background:#020617;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+input[type=text]{
+  width:70%;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+}
+button.sendBtn{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+}
+.banner-ad{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#020617;
+  text-align:center;
+  padding:10px;
+  border-top:1px solid #334155;
+}
+.roomCard{
+  background:#1e293b;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:10px;
+  cursor:pointer;
+  transition:.2s;
+}
+.roomCard:hover{
+  background:#334155;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="https://i.ibb.co/fVbJFkNx/large.png" id="appLogo">
+  <h1>Side Talk</h1>
+</header>
+
+<nav>
+  <button onclick="showSection('general')">General</button>
+  <button onclick="showSection('free')">Free Chats</button>
+  <button onclick="showSection('room')">Create/Join Room</button>
+</nav>
+
+<div class="container">
+
+  <!-- GENERAL CHAT -->
+  <div id="general" class="hidden">
+    <h2>General Chat</h2>
+    <div id="generalChat" class="chatBox"></div>
+    <div style="display:flex;gap:5px;">
+      <input type="text" id="generalInput" placeholder="Type a message">
+      <button class="sendBtn" onclick="sendGeneral()">Send</button>
+    </div>
+  </div>
+
+  <!-- FREE CHAT HALLWAY -->
+  <div id="free" class="hidden">
+    <h2>Free Chat Hallway</h2>
+    <div id="freeRooms"></div>
+    <div style="margin-top:10px;">
+      <input type="text" id="newFreeRoomName" placeholder="New room name">
+      <button onclick="createFreeRoom()">Create Room</button>
+    </div>
+  </div>
+
+  <!-- CREATE / JOIN ROOM -->
+  <div id="room" class="hidden">
+    <h2>Private Rooms</h2>
+    <input type="text" id="roomName" placeholder="Room Name">
+    <button onclick="createRoom()">Create Room</button>
+    <br><br>
+    <input type="text" id="joinCode" placeholder="Enter Room Code">
+    <button onclick="joinRoom()">Join Room</button>
+    <div id="roomStatus" style="margin-top:10px;"></div>
+  </div>
+
+</div>
+
+<div class="banner-ad" id="bannerAd">Sponsored Ad</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, getDocs, serverTimestamp, doc, setDoc } 
+from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+// FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyBbg9cxg6qGNYWyXxUKiJmBLojdXvZu6sU",
+  authDomain: "side-chat-b2553.firebaseapp.com",
+  projectId: "side-chat-b2553",
+  storageBucket: "side-chat-b2553.firebasestorage.app",
+  messagingSenderId: "1019895961728",
+  appId: "1:1019895961728:web:4e229932ff0bd9b15b2e65"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// NAVIGATION
+function showSection(id){
+  ['general','free','room'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// SESSION ANON NAME
+if(!sessionStorage.getItem("anonName")){
+  sessionStorage.setItem("anonName","anon"+Math.floor(Math.random()*10000));
+}
+const anonName = sessionStorage.getItem("anonName");
+
+// GENERAL CHAT
+const generalCol = collection(db,"general_chat");
+const generalQ = query(generalCol,orderBy("time","asc"));
+onSnapshot(generalQ,snap=>{
+  const box = document.getElementById("generalChat");
+  box.innerHTML="";
+  snap.forEach(doc=>{
+    const data = doc.data();
+    const div = document.createElement("div");
+    div.innerHTML = `<b>${data.username}</b>: ${data.text}`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+});
+window.sendGeneral = async function(){
+  const input = document.getElementById("generalInput");
+  if(input.value.trim()==="") return;
+  await addDoc(generalCol,{
+    username: anonName,
+    text: input.value,
+    time: serverTimestamp()
+  });
+  input.value="";
+};
+
+// FREE CHAT
+const freeCol = collection(db,"free_rooms");
+onSnapshot(freeCol,snap=>{
+  const container = document.getElementById("freeRooms");
+  container.innerHTML="";
+  snap.forEach(doc=>{
+    const data = doc.data();
+    const div = document.createElement("div");
+    div.className="roomCard";
+    div.innerText=`${data.name} (Code: ${doc.id})`;
+    div.onclick=()=>joinFreeRoom(doc.id);
+    container.appendChild(div);
+  });
+});
+window.createFreeRoom = async function(){
+  const name = document.getElementById("newFreeRoomName").value;
+  if(!name) return alert("Enter room name");
+  const id = Math.random().toString(36).substring(2,8);
+  await setDoc(doc(freeCol,id),{name});
+  document.getElementById("newFreeRoomName").value="";
+};
+function joinFreeRoom(id){
+  alert("Joined free room: "+id);
+}
+
+// PRIVATE ROOMS
+const privateCol = collection(db,"private_rooms");
+window.createRoom = async function(){
+  const name = document.getElementById("roomName").value;
+  if(!name) return alert("Enter room name");
+  const code = Math.random().toString(36).substring(2,8).toUpperCase();
+  await setDoc(doc(privateCol,code),{name,createdBy:anonName,time:serverTimestamp()});
+  document.getElementById("roomStatus").innerText=`Room created! Code: ${code}`;
+};
+window.joinRoom = async function(){
+  const code = document.getElementById("joinCode").value.toUpperCase();
+  const snap = await getDocs(privateCol);
+  let found=false;
+  snap.forEach(doc=>{
+    if(doc.id===code) found=true;
+  });
+  if(found){
+    document.getElementById("roomStatus").innerText=`Joined Room: ${code}`;
+  }else{
+    alert("Room not found");
+  }
+};
+
+// ADMIN BACKDOOR
+let tapCount=0;
+document.getElementById("appLogo").addEventListener("click",()=>{
+  tapCount++;
+  if(tapCount===20){
+    tapCount=0;
+    const pass = prompt("Enter Admin Password");
+    if(pass==="Akinpepe100") window.location.href="admin.html";
+    else alert("Wrong password");
+  }
+});
+
+// BANNER ADS
+const ads=["Advertise here","Your brand here","Sponsored"];
+let adIndex=0;
+setInterval(()=>{
+  adIndex=(adIndex+1)%ads.length;
+  document.getElementById("bannerAd").innerText=ads[adIndex];
+},30000);
+</script>
+</body>
+</html>
