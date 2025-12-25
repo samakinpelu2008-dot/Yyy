@@ -2,31 +2,168 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>Side Talk - Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Side Talk Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <style>
-body{margin:0;font-family:'Poppins',sans-serif;display:flex;background:#F3F4F6;}
-.sidebar{width:220px;background:#1E3A8A;color:white;height:100vh;display:flex;flex-direction:column;}
-.sidebar h2{text-align:center;padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.2);}
-.sidebar button{background:none;border:none;color:white;padding:15px 20px;text-align:left;cursor:pointer;font-weight:600;transition:0.2s;}
-.sidebar button:hover{background:rgba(255,255,255,0.1);}
-.main-content{flex:1;padding:25px;overflow-y:auto;}
-.admin-section{display:none;}
-.admin-section.active{display:block;}
-.card{background:white;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
-.report-card{background:#FFF3F3;border-radius:12px;padding:15px;margin-bottom:10px;}
-.ad-card{background:#E3F2FD;border-radius:12px;padding:15px;margin-bottom:10px;}
-#analytics div{display:flex;justify-content:space-between;padding:10px 0;}
-button.action-btn{background:#1E3A8A;color:white;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;}
-button.action-btn:hover{background:#4F46E5;}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#0f172a;
+  color:#fff;
+}
+header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  background:#020617;
+}
+header img{
+  height:42px;
+}
+header h1{
+  font-size:20px;
+  margin:0;
+}
+nav{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:10px;
+}
+nav button{
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+}
+section{
+  padding:15px;
+  display:none;
+}
+.activeSection{
+  display:block;
+}
+.card{
+  background:#1e293b;
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:10px;
+}
+input,select,textarea{
+  padding:8px;
+  margin:5px 0;
+  width:100%;
+  border-radius:8px;
+  border:none;
+  background:#334155;
+  color:#fff;
+}
+button.actionBtn{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+  margin-top:5px;
+}
 </style>
-<script type="module">
-// ---------------- Firebase Setup ----------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, onSnapshot, doc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+</head>
+<body>
 
+<header>
+  <img src="https://i.ibb.co/fVbJFkNx/large.png">
+  <h1>Side Talk Admin</h1>
+</header>
+
+<nav>
+  <button onclick="showSection('dashboard')">Dashboard</button>
+  <button onclick="showSection('chatAccess')">Chat Access</button>
+  <button onclick="showSection('adsManager')">Ads Manager</button>
+  <button onclick="showSection('analytics')">Analytics</button>
+  <button onclick="showSection('reports')">Reports</button>
+  <button onclick="showSection('clanManager')">Clan Manager</button>
+  <button onclick="showSection('partners')">Partners/Mods</button>
+  <button onclick="showSection('systemLogs')">System Logs</button>
+</nav>
+
+<!-- DASHBOARD -->
+<section id="dashboard" class="activeSection">
+  <h2>Dashboard Home</h2>
+  <div class="card">Welcome, Admin! Quick access to all sections.</div>
+</section>
+
+<!-- CHAT ACCESS -->
+<section id="chatAccess">
+  <h2>Chat Access</h2>
+  <div class="card">You can view all rooms and messages here.</div>
+</section>
+
+<!-- ADS MANAGER -->
+<section id="adsManager">
+  <h2>Ads Manager</h2>
+  <div class="card">
+    <p>Banner Ads</p>
+    <p>Current ads will rotate every 30 seconds</p>
+    <button class="actionBtn" onclick="addAd()">Add New Ad</button>
+    <div id="adsList"></div>
+  </div>
+</section>
+
+<!-- ANALYTICS -->
+<section id="analytics">
+  <h2>Analytics</h2>
+  <div class="card">
+    <p>Total Logged-in Users Today: <span id="totalUsers">0</span></p>
+    <p>Total Active Users: <span id="activeUsers">0</span></p>
+    <p>Total Time Used Today: <span id="totalTime">0</span> mins</p>
+    <p>Average Time per User: <span id="avgTime">0</span> mins</p>
+    <p>Average Users per Week: <span id="avgUsers">0</span></p>
+    <button class="actionBtn" onclick="deleteAnalytics()">Delete Analytics</button>
+  </div>
+</section>
+
+<!-- REPORTS -->
+<section id="reports">
+  <h2>Reports & Complaints</h2>
+  <div id="reportsContainer" class="card"></div>
+</section>
+
+<!-- CLAN MANAGER -->
+<section id="clanManager">
+  <h2>Clan Manager</h2>
+  <div class="card">
+    <input type="text" id="newClan" placeholder="New Clan Name">
+    <button class="actionBtn" onclick="addClan()">Add Clan</button>
+    <div id="clanList"></div>
+  </div>
+</section>
+
+<!-- PARTNERS / MODERATORS -->
+<section id="partners">
+  <h2>Partners / Moderators</h2>
+  <div class="card">
+    <input type="text" id="newMod" placeholder="Username">
+    <button class="actionBtn" onclick="addPartner()">Add Partner / Mod</button>
+    <div id="modList"></div>
+  </div>
+</section>
+
+<!-- SYSTEM LOGS -->
+<section id="systemLogs">
+  <h2>System Logs</h2>
+  <div class="card" id="logsContainer"></div>
+</section>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, getDocs, serverTimestamp, doc, setDoc } 
+from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+// FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyBbg9cxg6qGNYWyXxUKiJmBLojdXvZu6sU",
   authDomain: "side-chat-b2553.firebaseapp.com",
@@ -35,195 +172,103 @@ const firebaseConfig = {
   messagingSenderId: "1019895961728",
   appId: "1:1019895961728:web:4e229932ff0bd9b15b2e65"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-// ---------------- Sidebar Navigation ----------------
-function showAdminSection(sectionId){
-  document.querySelectorAll(".admin-section").forEach(sec=> sec.style.display="none");
-  document.getElementById(sectionId).style.display="block";
+// SECTION NAVIGATION
+function showSection(id){
+  document.querySelectorAll("section").forEach(s=>s.classList.remove("activeSection"));
+  document.getElementById(id).classList.add("activeSection");
 }
 
-// ---------------- Analytics ----------------
-async function loadAnalytics(){
-  const analyticsDiv = document.getElementById("analytics-list");
-  analyticsDiv.innerHTML="";
-
-  const usersSnap = await getDocs(collection(db,"users"));
-  const totalUsers = usersSnap.size;
-  document.getElementById("total-users").textContent = totalUsers;
-
-  const activeUsers = Array.from(usersSnap.docs).filter(docSnap=>{
-    const data = docSnap.data();
-    if(!data.lastActive) return false;
-    const lastActiveTime = data.lastActive.toDate().getTime();
-    const now = new Date().getTime();
-    return now - lastActiveTime <= 24*60*60*1000;
-  }).length;
-  document.getElementById("active-users").textContent = activeUsers;
-
-  let totalTime=0;
-  usersSnap.forEach(docSnap=>{
-    const data = docSnap.data();
-    if(data.totalTime) totalTime+=data.totalTime;
+// ADS MANAGER
+const adsCol = collection(db,"admin_ads");
+onSnapshot(adsCol,snap=>{
+  const container=document.getElementById("adsList");
+  container.innerHTML="";
+  snap.forEach(doc=>{
+    const div=document.createElement("div");
+    div.innerText=doc.data().text;
+    container.appendChild(div);
   });
-  document.getElementById("total-time").textContent = formatTime(totalTime);
+});
+window.addAd = async function(){
+  const text=prompt("Enter Ad text:");
+  if(!text) return;
+  await addDoc(adsCol,{text,time:serverTimestamp()});
+};
 
-  const avgTime = totalUsers>0 ? Math.floor(totalTime / totalUsers) : 0;
-  document.getElementById("avg-time").textContent = formatTime(avgTime);
-
-  const today = new Date().toISOString().split("T")[0];
-  await addDoc(collection(db,"analytics"),{
-    date:today,
-    totalUsers,
-    activeUsers,
-    totalTime,
-    avgTime,
-    createdAt: serverTimestamp()
+// REPORTS / COMPLAINTS
+const reportsCol=collection(db,"reports");
+onSnapshot(reportsCol,snap=>{
+  const container=document.getElementById("reportsContainer");
+  container.innerHTML="";
+  snap.forEach(doc=>{
+    const div=document.createElement("div");
+    div.innerHTML=`<b>${doc.data().username}</b>: ${doc.data().text}`;
+    container.appendChild(div);
   });
+});
 
-  const analyticsSnap = await getDocs(collection(db,"analytics"));
-  analyticsSnap.forEach(docSnap=>{
-    const data = docSnap.data();
-    const div = document.createElement("div");
-    div.className="card";
-    div.innerHTML=`<strong>Date:</strong> ${data.date} | <strong>Total:</strong> ${data.totalUsers} | <strong>Active:</strong> ${data.activeUsers} | <strong>Total Time:</strong> ${formatTime(data.totalTime)} | <strong>Avg Time:</strong> ${formatTime(data.avgTime)}
-    <button class="action-btn" onclick="deleteAnalytics('${docSnap.id}')">Delete</button>`;
-    analyticsDiv.appendChild(div);
+// CLAN MANAGER
+const clanCol=collection(db,"clans");
+onSnapshot(clanCol,snap=>{
+  const container=document.getElementById("clanList");
+  container.innerHTML="";
+  snap.forEach(doc=>{
+    const div=document.createElement("div");
+    div.innerText=doc.id;
+    container.appendChild(div);
   });
-}
-
-function formatTime(seconds){
-  const h = Math.floor(seconds/3600);
-  const m = Math.floor((seconds%3600)/60);
-  const s = seconds%60;
-  return `${h}h ${m}m ${s}s`;
-}
-
-async function deleteAnalytics(id){
-  await deleteDoc(doc(db,"analytics",id));
-  loadAnalytics();
-}
-
-// ---------------- Reports ----------------
-async function loadReports(){
-  const reportsDiv = document.getElementById("reports-list");
-  reportsDiv.innerHTML="";
-  const snapshot = await getDocs(collection(db,"reports"));
-  snapshot.forEach(docSnap=>{
-    const data = docSnap.data();
-    const div = document.createElement("div");
-    div.className="report-card";
-    div.innerHTML=`<strong>${data.category}</strong><br>${data.description}`;
-    reportsDiv.appendChild(div);
-  });
-}
-
-// ---------------- Ads ----------------
-async function loadAds(){
-  const adsDiv = document.getElementById("ads-list");
-  adsDiv.innerHTML="";
-  const snapshot = await getDocs(collection(db,"ads"));
-  snapshot.forEach(docSnap=>{
-    const data = docSnap.data();
-    const div = document.createElement("div");
-    div.className="ad-card";
-    div.innerHTML=`<strong>${data.title}</strong><br>${data.link}`;
-    adsDiv.appendChild(div);
-  });
-}
-
-async function addAd(){
-  const title = prompt("Enter Ad Title:");
-  const link = prompt("Enter Ad Link:");
-  if(!title || !link) return;
-  await addDoc(collection(db,"ads"),{
-    title:title,
-    link:link,
-    createdAt:serverTimestamp()
-  });
-  loadAds();
-}
-
-// ---------------- Clan Manager ----------------
-async function loadClans(){
-  const clansDiv = document.getElementById("clans-list");
-  clansDiv.innerHTML="";
-  const snapshot = await getDocs(collection(db,"clans"));
-  snapshot.forEach(docSnap=>{
-    const data = docSnap.data();
-    const div = document.createElement("div");
-    div.className="card";
-    div.innerHTML=`${data.name} <button class="action-btn" onclick="deleteClan('${docSnap.id}')">Delete</button>`;
-    clansDiv.appendChild(div);
-  });
-}
-
-async function addClan(){
-  const name = prompt("Enter Clan Name:");
+});
+window.addClan=async function(){
+  const name=document.getElementById("newClan").value;
   if(!name) return;
-  await addDoc(collection(db,"clans"),{name:name,createdAt:serverTimestamp()});
-  loadClans();
-}
+  await setDoc(doc(clanCol,name),{created:serverTimestamp()});
+  document.getElementById("newClan").value="";
+};
 
-async function deleteClan(id){
-  await deleteDoc(doc(db,"clans",id));
-  loadClans();
-}
-
-// ---------------- Voice Notes Management ----------------
-async function loadVoiceNotes(){
-  const voiceDiv = document.getElementById("voice-list");
-  voiceDiv.innerHTML="";
-  const snapshot = await getDocs(collection(db,"voiceMessages"));
-  snapshot.forEach(docSnap=>{
-    const data = docSnap.data();
-    const div = document.createElement("div");
-    div.className="card";
-    div.innerHTML=`${data.username}: <button class="action-btn" onclick="deleteVoice('${docSnap.id}','${data.path}')">Delete</button>`;
-    voiceDiv.appendChild(div);
+// PARTNERS / MODS
+const modCol=collection(db,"moderators");
+onSnapshot(modCol,snap=>{
+  const container=document.getElementById("modList");
+  container.innerHTML="";
+  snap.forEach(doc=>{
+    const div=document.createElement("div");
+    div.innerText=doc.id;
+    container.appendChild(div);
   });
-}
+});
+window.addPartner=async function(){
+  const name=document.getElementById("newMod").value;
+  if(!name) return;
+  await setDoc(doc(modCol,name),{created:serverTimestamp()});
+  document.getElementById("newMod").value="";
+};
 
-async function deleteVoice(id,path){
-  await deleteDoc(doc(db,"voiceMessages",id));
-  const voiceRef = ref(storage,path);
-  await deleteObject(voiceRef);
-  loadVoiceNotes();
-}
+// SYSTEM LOGS (simple example)
+const logCol=collection(db,"system_logs");
+onSnapshot(logCol,snap=>{
+  const container=document.getElementById("logsContainer");
+  container.innerHTML="";
+  snap.forEach(doc=>{
+    const div=document.createElement("div");
+    div.innerText=`${doc.id}: ${JSON.stringify(doc.data())}`;
+    container.appendChild(div);
+  });
+});
+
+// ANALYTICS (example placeholders)
+document.getElementById("totalUsers").innerText=1250;
+document.getElementById("activeUsers").innerText=500;
+document.getElementById("totalTime").innerText=3400;
+document.getElementById("avgTime").innerText=6.8;
+document.getElementById("avgUsers").innerText=4800;
+window.deleteAnalytics=function(){
+  alert("Analytics deleted (demo placeholder)");
+};
 </script>
-</head>
-<body>
 
-<div class="sidebar">
-  <h2>Side Talk Admin</h2>
-  <button onclick="showAdminSection('dashboard-section'); loadAnalytics()">Dashboard</button>
-  <button onclick="showAdminSection('chat-access-section')">Chat Access</button>
-  <button onclick="showAdminSection('ads-section'); loadAds()">Ads Manager</button>
-  <button onclick="showAdminSection('analytics-section'); loadAnalytics()">Analytics</button>
-  <button onclick="showAdminSection('reports-section'); loadReports()">Reports / Complaints</button>
-  <button onclick="showAdminSection('clan-section'); loadClans()">Clan Manager</button>
-  <button onclick="showAdminSection('moderators-section')">Partners / Moderators</button>
-  <button onclick="showAdminSection('system-section')">System Logs</button>
-  <button onclick="showAdminSection('voice-section'); loadVoiceNotes()">Voice Notes</button>
-</div>
-
-<div class="main-content">
-  <div id="dashboard-section" class="admin-section active"><h2>Dashboard</h2><div class="card">Welcome, Admin!</div></div>
-  <div id="chat-access-section" class="admin-section"><h2>Chat Access</h2><div class="card">Manage user chats</div></div>
-  <div id="ads-section" class="admin-section"><h2>Ads Manager</h2><button class="action-btn" onclick="addAd()">Add New Ad</button><div id="ads-list"></div></div>
-  <div id="analytics-section" class="admin-section"><h2>Analytics</h2><div id="analytics-overview" class="card">
-    <div><strong>Total Users:</strong> <span id="total-users">0</span></div>
-    <div><strong>Active Users (24h):</strong> <span id="active-users">0</span></div>
-    <div><strong>Total Time:</strong> <span id="total-time">0h 0m 0s</span></div>
-    <div><strong>Average User Time:</strong> <span id="avg-time">0h 0m 0s</span></div>
-  </div><h3>Saved Analytics Snapshots</h3><div id="analytics-list"></div></div>
-  <div id="reports-section" class="admin-section"><h2>Reports / Complaints</h2><div id="reports-list"></div></div>
-  <div id="clan-section" class="admin-section"><h2>Clan Manager</h2><button class="action-btn" onclick="addClan()">Add Clan</button><div id="clans-list"></div></div>
-  <div id="moderators-section" class="admin-section"><h2>Partners / Moderators</h2><div class="card">Manage moderators and partners</div></div>
-  <div id="system-section" class="admin-section"><h2>System Logs</h2><div class="card">View logs</div></div>
-  <div id="voice-section" class="admin-section"><h2>Voice Notes Management</h2><div id="voice-list"></div></div>
-</div>
 </body>
 </html>
