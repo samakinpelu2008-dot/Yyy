@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Side Talk - Reports & Safety</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#0f172a;
+  color:#fff;
+}
+header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  background:#020617;
+}
+header img{
+  height:42px;
+  cursor:pointer;
+}
+header h1{
+  font-size:20px;
+  margin:0;
+}
+.container{
+  padding:15px;
+}
+textarea{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  background:#1e293b;
+  color:#fff;
+}
+button{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+  margin-top:10px;
+}
+.reportCard{
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+.banner-ad{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#020617;
+  text-align:center;
+  padding:10px;
+  border-top:1px solid #334155;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="https://i.ibb.co/fVbJFkNx/large.png" id="appLogo">
+  <h1>Side Talk</h1>
+</header>
+
+<div class="container">
+  <h2>Report / Safety</h2>
+  <textarea id="reportText" placeholder="Enter your report or complaint..."></textarea>
+  <button onclick="submitReport()">Send Report</button>
+
+  <h3 style="margin-top:20px;">Your Previous Reports</h3>
+  <div id="reportsList"></div>
+</div>
+
+<div class="banner-ad" id="bannerAd">Sponsored Ad</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } 
+from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+// FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyBbg9cxg6qGNYWyXxUKiJmBLojdXvZu6sU",
+  authDomain: "side-chat-b2553.firebaseapp.com",
+  projectId: "side-chat-b2553",
+  storageBucket: "side-chat-b2553.firebasestorage.app",
+  messagingSenderId: "1019895961728",
+  appId: "1:1019895961728:web:4e229932ff0bd9b15b2e65"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// SESSION ANON NAME
+if(!sessionStorage.getItem("anonName")){
+  sessionStorage.setItem("anonName","anon"+Math.floor(Math.random()*10000));
+}
+const anonName = sessionStorage.getItem("anonName");
+
+// REPORT COLLECTION
+const reportCol = collection(db,"reports");
+const q = query(reportCol, orderBy("time","desc"));
+onSnapshot(q, snap=>{
+  const list = document.getElementById("reportsList");
+  list.innerHTML="";
+  snap.forEach(doc=>{
+    const data = doc.data();
+    if(data.username===anonName){
+      const div = document.createElement("div");
+      div.className="reportCard";
+      div.innerHTML=`<b>${data.username}</b>: ${data.text}`;
+      list.appendChild(div);
+    }
+  });
+});
+
+// SUBMIT REPORT
+window.submitReport = async function(){
+  const txt = document.getElementById("reportText").value;
+  if(!txt) return alert("Enter report text");
+  await addDoc(reportCol,{
+    username: anonName,
+    text: txt,
+    time: serverTimestamp()
+  });
+  document.getElementById("reportText").value="";
+  alert("Report sent successfully!");
+};
+
+// ADMIN BACKDOOR
+let tapCount=0;
+document.getElementById("appLogo").addEventListener("click",()=>{
+  tapCount++;
+  if(tapCount===20){
+    tapCount=0;
+    const pass = prompt("Enter Admin Password");
+    if(pass==="Akinpepe100") window.location.href="admin.html";
+    else alert("Wrong password");
+  }
+});
+
+// BANNER ADS
+const ads=["Advertise here","Your brand here","Sponsored"];
+let adIndex=0;
+setInterval(()=>{
+  adIndex=(adIndex+1)%ads.length;
+  document.getElementById("bannerAd").innerText=ads[adIndex];
+},30000);
+</script>
+
+</body>
+</html>
